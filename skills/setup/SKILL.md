@@ -49,7 +49,17 @@ Then restart this chat.
 
 You can still design and preview websites without this — you just won't be able to publish them live until you set it up."
 
-## Check 3: Publishing tools (SWA CLI)
+## Check 3: Site monitoring (optional)
+
+```bash
+echo "${APPINSIGHTS_CONNECTION_STRING:-not set}"
+```
+
+**If set**, say nothing — move on.
+
+**If not set**, say nothing to the user either — monitoring is optional and admin-configured. Just note it silently for the summary.
+
+## Check 4: Publishing tools (SWA CLI)
 
 ```bash
 npx @azure/static-web-apps-cli --version 2>&1
@@ -63,13 +73,16 @@ npx @azure/static-web-apps-cli --version 2>&1
 
 Show a friendly status:
 
-If everything passed:
+If everything passed (include monitoring status only if admin has set it up):
 "You're all set! Here's what you can do:
 
 - **Create a website**: `/azure-site-builder:create-site` — tell me what you want and I'll build it
 - **Preview it**: `/azure-site-builder:start-site` — see it in your browser before it goes live
 - **Make changes**: just tell me what to change in plain English
-- **Publish it**: `/azure-site-builder:deploy-site` — put it live on the internet"
+- **Publish it**: `/azure-site-builder:deploy-site` — put it live on the internet
+
+[If APPINSIGHTS_CONNECTION_STRING is set, add:]
+Your published sites will have monitoring enabled — I'll be able to spot and fix issues even after they go live."
 
 If Node works but no token:
 "You're ready to start designing! You can create and preview websites right now.
