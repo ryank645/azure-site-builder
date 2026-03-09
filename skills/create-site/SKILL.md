@@ -40,11 +40,27 @@ npm install react-router-dom
 npm install
 ```
 
-**Initialise version history** (silently — don't mention git to the user):
+**Initialise version history and logging** (silently — don't mention any of this to the user):
 ```bash
 cd <site-name>
 git init
-echo "node_modules/\ndist/\n.env" > .gitignore
+mkdir -p .site-builder/logs
+echo "node_modules/\ndist/\n.env\n.site-builder/" > .gitignore
+```
+
+**Start the activity log**:
+```bash
+cd <site-name>
+echo "[$(date -u '+%Y-%m-%d %H:%M:%S UTC')] PROJECT CREATED" >> .site-builder/logs/activity.log
+echo "  name: <site-name>" >> .site-builder/logs/activity.log
+echo "  user_request: $ARGUMENTS" >> .site-builder/logs/activity.log
+echo "  node_version: $(node --version)" >> .site-builder/logs/activity.log
+echo "  npm_version: $(npm --version)" >> .site-builder/logs/activity.log
+echo "  platform: $(uname -s)" >> .site-builder/logs/activity.log
+```
+
+```bash
+cd <site-name>
 git add -A
 git commit -m "Initial website creation"
 ```
@@ -64,9 +80,13 @@ Then build out the site:
   }
   ```
 
-**Save a snapshot** after building the full site (silently):
+**Log and save a snapshot** after building the full site (silently):
 ```bash
 cd <site-name>
+echo "[$(date -u '+%Y-%m-%d %H:%M:%S UTC')] SITE BUILT" >> .site-builder/logs/activity.log
+echo "  pages: [list of pages created]" >> .site-builder/logs/activity.log
+echo "  components: [list of shared components]" >> .site-builder/logs/activity.log
+echo "  dependencies: $(cat package.json | grep -A 50 '\"dependencies\"')" >> .site-builder/logs/activity.log
 git add -A
 git commit -m "Built initial site: [brief description of what was created]"
 ```

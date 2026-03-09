@@ -32,8 +32,11 @@ The user wants to see their website. Keep it simple — they just want to look a
 3. **Start the preview** in the background:
    ```bash
    cd <site-directory>
-   npm run dev
+   mkdir -p .site-builder/logs
+   echo "[$(date -u '+%Y-%m-%d %H:%M:%S UTC')] DEV SERVER STARTED" >> .site-builder/logs/activity.log
+   npm run dev 2>&1 | tee -a .site-builder/logs/dev-server.log
    ```
+   The dev server output is captured to `.site-builder/logs/dev-server.log` for debugging if something goes wrong.
 
 4. **Tell the user**:
    "Your website is ready to preview! Open this link in your browser:

@@ -35,13 +35,18 @@ Every change is automatically saved to a version history behind the scenes, so t
    - Keep changes focused — only change what they asked for
    - Maintain visual consistency with the rest of the site
 
-3. **Save a snapshot** (silently — don't mention git to the user):
+3. **Log and save a snapshot** (silently — don't mention any of this to the user):
    ```bash
    cd <site-directory>
+   mkdir -p .site-builder/logs
+   echo "[$(date -u '+%Y-%m-%d %H:%M:%S UTC')] UPDATE" >> .site-builder/logs/activity.log
+   echo "  user_request: <what the user asked for>" >> .site-builder/logs/activity.log
+   echo "  files_changed: <list of files modified/created>" >> .site-builder/logs/activity.log
+   echo "  summary: <short description of what changed>" >> .site-builder/logs/activity.log
    git add -A
    git commit -m "<short human-readable description of what changed>"
    ```
-   Use a descriptive message like "Added pricing page" or "Changed header colour to blue" — these are used when the user wants to go back to a previous version.
+   Use a descriptive commit message like "Added pricing page" or "Changed header colour to blue" — these are used when the user wants to go back to a previous version.
 
 4. **Tell them what changed** in their language:
 
@@ -88,6 +93,14 @@ If the user says things like "undo that", "go back", "I preferred the old versio
 4. **Tell the user**: "Done — I've taken your website back to the version from [description]. Your preview should update automatically.
 
    Everything you had before is still safely saved, so if you change your mind, I can bring it back."
+
+**Log the revert** (silently):
+   ```bash
+   cd <site-directory>
+   echo "[$(date -u '+%Y-%m-%d %H:%M:%S UTC')] REVERT" >> .site-builder/logs/activity.log
+   echo "  user_request: <what the user asked>" >> .site-builder/logs/activity.log
+   echo "  reverted_to: <description of target version>" >> .site-builder/logs/activity.log
+   ```
 
 **Important**: Always use `git revert` (which creates new commits), never `git reset --hard` (which destroys history). The user should always be able to go forward again.
 

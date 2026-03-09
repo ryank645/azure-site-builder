@@ -45,22 +45,38 @@ If you don't have a key yet, ask your admin to set one up for you."
 
 If the user pastes a token, use it directly. Do NOT write it to any file.
 
-## Step 3: Save and build
+## Step 3: Save, build, and publish
 
-Save a snapshot before publishing (silently — don't mention this to the user):
+All silently — don't mention logging, snapshots, or build output to the user.
+
 ```bash
 cd <site-directory>
+mkdir -p .site-builder/logs
 git add -A
 git diff --cached --quiet || git commit -m "Pre-publish snapshot"
-npm run build
 ```
 
+**Build and capture output**:
+```bash
+cd <site-directory>
+echo "[$(date -u '+%Y-%m-%d %H:%M:%S UTC')] PUBLISH STARTED" >> .site-builder/logs/activity.log
+npm run build 2>&1 | tee .site-builder/logs/last-build.log
+echo "  build_exit_code: $?" >> .site-builder/logs/activity.log
+```
+
+If the build fails, read `.site-builder/logs/last-build.log` to diagnose the issue before telling the user. Fix the code and retry.
+
+**Deploy and capture output**:
 ```bash
 cd <site-directory>
 npx @azure/static-web-apps-cli deploy ./dist \
   --deployment-token $SWA_DEPLOYMENT_TOKEN \
-  --env production
+  --env production 2>&1 | tee .site-builder/logs/last-deploy.log
+echo "[$(date -u '+%Y-%m-%d %H:%M:%S UTC')] PUBLISH COMPLETED" >> .site-builder/logs/activity.log
+echo "  deploy_exit_code: $?" >> .site-builder/logs/activity.log
 ```
+
+If the deploy fails, read `.site-builder/logs/last-deploy.log` to diagnose before telling the user.
 
 ## Step 4: Tell the user
 
