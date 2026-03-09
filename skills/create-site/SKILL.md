@@ -1,55 +1,78 @@
 ---
 name: create-site
-description: Create a new React website project from a plain-English description. Use when the user wants to build a new website, landing page, portfolio, or any static site.
+description: Create a new website from a plain-English description. Use when the user wants to build a website, landing page, portfolio, or any static site.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
-argument-hint: [description of the website you want]
+argument-hint: [describe the website you want]
 ---
 
-# Create a React Website
+# Build a Website
 
-The user wants to create a website. They are non-technical, so guide them through it simply.
+You're working with a product owner or business user who wants a website. They'll describe what they want in business terms — your job is to translate that into a working React site without exposing them to any technical complexity.
 
-1. **Ask clarifying questions** if the description is vague:
-   - What is the site for? (business, portfolio, blog, event, etc.)
-   - What pages do they need? (home, about, contact, etc.)
-   - Any color/style preferences?
-   - Do they have content (text, images) ready?
+## How to talk to the user
 
-2. **Create the React project** using Vite (fast, modern):
-   ```bash
-   npm create vite@latest <site-name> -- --template react
-   cd <site-name>
-   npm install
-   ```
+- Say "pages" not "routes" or "components"
+- Say "sections" not "divs" or "containers"
+- Say "style" or "look and feel" not "CSS"
+- Say "your website" not "the app" or "the project"
+- Say "preview" not "run locally"
+- Say "publish" not "deploy"
+- Never mention React, JavaScript, HTML, or CSS unless they ask
+- Describe things in terms of what the user sees, not how it's built
 
-3. **Install useful dependencies**:
-   ```bash
-   npm install react-router-dom
-   ```
+## Step 1: Understand what they want
 
-4. **Build out the site** based on their description:
-   - Create pages as React components in `src/pages/`
-   - Set up routing with react-router-dom in `src/App.jsx`
-   - Create reusable components in `src/components/` (Header, Footer, etc.)
-   - Write clean CSS in component-level `.css` files or a shared `src/styles/`
-   - Make it responsive (mobile-friendly) by default
-   - Use modern, clean design — no unnecessary complexity
+If the description is vague, ask in product language:
+- "What's the purpose of this website?" (sell a product, share info, showcase work, etc.)
+- "What pages do you need?" (home, about us, services, contact, pricing, etc.)
+- "Do you have a colour scheme or brand style in mind?"
+- "Do you have the text and images ready, or should I use placeholder content for now?"
+- "Any websites you've seen that have the kind of look you're going for?"
 
-5. **Add Azure Static Web Apps config** at the project root:
-   Create `staticwebapp.config.json`:
-   ```json
-   {
-     "navigationFallback": {
-       "rewrite": "/index.html",
-       "exclude": ["/images/*.{png,jpg,gif}", "/css/*"]
-     }
-   }
-   ```
+## Step 2: Build it
 
-6. **After creating the site**, tell the user in plain language:
-   - What was created and what each part does
-   - "Run `/azure-site-builder:start-site` to see it in your browser"
-   - "Tell me what you'd like to change and I'll update it"
-   - "When you're happy, run `/azure-site-builder:deploy-site` to publish it live"
+Create a Vite + React project. The user doesn't need to know this.
+
+```bash
+npm create vite@latest <site-name> -- --template react
+cd <site-name>
+npm install react-router-dom
+npm install
+```
+
+Then build out the site:
+- Create pages based on what they described
+- Set up navigation between pages
+- Use clean, modern, responsive design
+- Use a consistent colour scheme (ask or pick something professional)
+- Add a `staticwebapp.config.json` at the root for proper routing:
+  ```json
+  {
+    "navigationFallback": {
+      "rewrite": "/index.html",
+      "exclude": ["/images/*.{png,jpg,gif}", "/css/*"]
+    }
+  }
+  ```
+
+## Step 3: Present what you built
+
+Describe the website back to them in their language:
+
+"Here's what I've built for you:
+
+- **Home page** — [describe what's on it]
+- **About page** — [describe what's on it]
+- **Contact page** — [describe what's on it]
+
+To see it in your browser, say **'show me'** or run `/azure-site-builder:start-site`.
+
+Want to change anything? Just tell me — for example:
+- 'Make the header darker'
+- 'Add a pricing section'
+- 'Change the phone number to...'
+- 'I want the layout more like [example]'
+
+When you're happy with it, say **'publish it'** or run `/azure-site-builder:deploy-site` to put it live."
 
 User's request: $ARGUMENTS

@@ -1,93 +1,80 @@
 ---
 name: setup
-description: Check all prerequisites are installed and walk the user through setting up anything missing. Run this before using any other azure-site-builder skills.
+description: Check everything is ready to start building. Run this first before creating a website.
 allowed-tools: Bash, Read, Glob
 ---
 
-# Setup & Prerequisite Check
+# Getting You Set Up
 
-Walk the user through getting everything they need installed. Be friendly and patient — assume they are non-technical. Explain what each tool is and why they need it in plain language.
+You're helping a product owner or business user get ready to build and publish websites. They don't know (or need to know) what Node.js, npm, or CLI tools are. Speak their language:
 
-Run each check below. For each one, report a clear pass/fail status. If something is missing, walk them through installing it step by step before moving to the next check.
+- Say "your computer" not "your machine"
+- Say "publish" not "deploy"
+- Say "preview" not "run the dev server"
+- Say "website builder tools" not "Node.js and npm"
+- Never mention technical details unless something goes wrong and they need to act
 
-## Check 1: Node.js
+Run each check below silently. Only surface issues that need the user's attention.
+
+## Check 1: Website builder tools (Node.js + npm)
 
 ```bash
 node --version
-```
-
-**If missing**, tell them:
-- "Node.js is what runs your website locally. Let me install it for you."
-- Try: `winget install OpenJS.NodeJS.LTS`
-- If winget fails, say: "Download and install Node.js from https://nodejs.org — pick the LTS version (the green button). Run the installer with all defaults, then restart your terminal and tell me to try again."
-- **Required version**: 18 or higher
-
-## Check 2: npm
-
-```bash
 npm --version
 ```
 
-- This comes with Node.js. If Node is installed but npm isn't found, something went wrong with the Node install. Tell them to reinstall Node.
+**If installed**, say nothing — move on.
 
-## Check 3: Deployment Token
+**If missing**, say:
+"I need to install some website builder tools on your computer. This is a one-time setup."
+- Try: `winget install OpenJS.NodeJS.LTS`
+- If winget fails: "I need you to do one thing manually: go to https://nodejs.org, click the big green download button, and run the installer. Accept all the defaults. Once it's done, restart this chat and run `/azure-site-builder:setup` again."
 
-Check if the deployment token is set:
+## Check 2: Publishing credentials
+
 ```bash
 echo "${SWA_DEPLOYMENT_TOKEN:-not set}"
 ```
 
-**If set**, tell them: "Your deployment token is configured. You'll be able to publish your site."
+**If set**, say nothing — move on.
 
-**If not set**, tell them:
+**If not set**, say:
+"You're almost ready! To publish websites, you'll need a publishing key from your admin. They'll give you a long code that looks like a random string of characters.
 
-"To publish your site, you'll need a deployment token from your admin. Once you have it, set it up so it's always available:
-
-**In PowerShell (recommended — persists across sessions):**
+Once you have it, set it up in PowerShell (one-time):
 ```
-[System.Environment]::SetEnvironmentVariable('SWA_DEPLOYMENT_TOKEN', 'token-from-admin', 'User')
+[System.Environment]::SetEnvironmentVariable('SWA_DEPLOYMENT_TOKEN', 'paste-your-key-here', 'User')
 ```
-Then restart your terminal and run `/azure-site-builder:setup` again.
+Then restart this chat.
 
-**Or in bash (current session only):**
-```
-export SWA_DEPLOYMENT_TOKEN=token-from-admin
-```
+You can still design and preview websites without this — you just won't be able to publish them live until you set it up."
 
-Don't worry about this for now — you can still create and preview your site without it. You only need the token when you're ready to publish."
-
-## Check 4: SWA CLI availability
+## Check 3: Publishing tools (SWA CLI)
 
 ```bash
 npx @azure/static-web-apps-cli --version 2>&1
 ```
 
-- This runs via npx so it doesn't need a global install. Just confirm it resolves.
-- If it fails, try: `npm install -g @azure/static-web-apps-cli`
-- If that also fails, there's likely a Node/npm issue — revisit Check 1.
+**If it works**, say nothing.
+**If it fails**, try: `npm install -g @azure/static-web-apps-cli`
+- If that also fails, revisit Check 1.
 
 ## Summary
 
-After all checks, show a summary table:
+Show a friendly status:
 
-```
-Setup Results:
-  Node.js          ✅ v22.x.x
-  npm              ✅ v10.x.x
-  Deploy Token     ✅ Configured
-  SWA CLI          ✅ v2.x.x
-```
+If everything passed:
+"You're all set! Here's what you can do:
 
-Or with issues:
-```
-Setup Results:
-  Node.js          ✅ v22.x.x
-  npm              ✅ v10.x.x
-  Deploy Token     ⚠️  Not set (optional — only needed to publish)
-  SWA CLI          ✅ v2.x.x
-```
+- **Create a website**: `/azure-site-builder:create-site` — tell me what you want and I'll build it
+- **Preview it**: `/azure-site-builder:start-site` — see it in your browser before it goes live
+- **Make changes**: just tell me what to change in plain English
+- **Publish it**: `/azure-site-builder:deploy-site` — put it live on the internet"
 
-Then tell them:
-- If all passed: "You're all set! Run `/azure-site-builder:create-site` to build your first website."
-- If Node/npm passed but no token: "You can start building! Run `/azure-site-builder:create-site` to create your site. You'll need the deployment token from your admin when you're ready to publish."
-- If Node/npm failed: "Fix the items above and run `/azure-site-builder:setup` again. Let me know if you need help with any step."
+If Node works but no token:
+"You're ready to start designing! You can create and preview websites right now.
+
+When you're ready to publish, ask your admin for a publishing key and I'll walk you through setting it up."
+
+If Node is missing:
+"We need to get one thing installed first — I've explained what to do above. Once that's sorted, run `/azure-site-builder:setup` again and we'll be good to go."

@@ -1,40 +1,57 @@
 ---
 name: update-site
-description: Update an existing React website using plain-English instructions. Use when the user wants to change content, styling, layout, add pages, or modify any part of their site.
+description: Make changes to the website based on what the user describes. Use when the user wants to change content, look and feel, layout, or add new pages.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
-argument-hint: [what you want to change]
+argument-hint: [describe what you want to change]
 ---
 
-# Update the Website
+# Make Changes to the Website
 
-The user wants to make changes to their React site using natural language. They are non-technical.
+The user wants to update their website. They'll describe changes in everyday language — your job is to figure out what code changes are needed and make them.
+
+## How to talk to the user
+
+- Say "I've updated..." not "I've edited the component..."
+- Say "the heading" not "the h1 tag"
+- Say "the page" not "the route"
+- Say "the look" or "the style" not "the CSS"
+- Describe changes in terms of what they'll see, not what you changed in the code
+- Never list file paths or code snippets unless they ask
+
+## Steps
 
 1. **Find the site**:
-   - Look for React projects (directories with `package.json` + `src/App.jsx`) in the current working directory
-   - If multiple sites exist, ask which one to update
-   - Read the existing components to understand the current state
+   - Look for React projects in the current working directory
+   - If multiple exist, ask which one
+   - Read the relevant files to understand the current state
 
-2. **Understand the request** and map it to code changes. Common requests:
-   - "Change the heading to..." → Edit JSX content
-   - "Make it blue" → Update CSS colors/theme
-   - "Add a contact page" → Create new page component + add route
-   - "Add my phone number" → Edit content in relevant component
-   - "Make the text bigger" → Update CSS font sizes
-   - "Add a photo gallery" → Create new component with image grid
-   - "Add a navigation menu" → Update Header/Nav component
-   - "Make it look more modern" → Restyle with updated CSS
+2. **Make the changes**:
+   - Map their request to the right code changes
+   - Use Edit for targeted changes (preferred over rewriting files)
+   - Keep changes focused — only change what they asked for
+   - Maintain visual consistency with the rest of the site
 
-3. **Make the changes**:
-   - Use Edit tool for targeted changes (preferred)
-   - Use Write tool only for new files (new pages, new components)
-   - Keep changes minimal and focused on what was asked
-   - Maintain consistency with existing style and patterns
-   - If the dev server is running, changes will hot-reload automatically
+3. **Tell them what changed** in their language:
 
-4. **After updating**, tell the user in plain language:
-   - What changed
-   - "Check your browser — it should update automatically"
-   - "Want to change anything else? Just tell me"
-   - "Happy with it? Run `/azure-site-builder:deploy-site` to publish"
+   "Done! Here's what I changed:
+   - [Describe visible change 1]
+   - [Describe visible change 2]
+
+   If your preview is open, it should update automatically. If not, run `/azure-site-builder:start-site` to see it.
+
+   Want to tweak anything else?"
+
+## Common requests and what they mean
+
+| What they say | What to do |
+|---|---|
+| "Make it more modern" | Update fonts, spacing, colours, add subtle shadows/rounded corners |
+| "It feels cluttered" | Add whitespace, simplify layout, reduce content density |
+| "Can you add a contact form?" | Add a form section (name, email, message) with basic styling |
+| "Change the colours to match our brand" | Ask for brand colours or a reference, update colour scheme globally |
+| "Add a new page for X" | Create new page component, add to navigation |
+| "Move X above Y" | Reorder sections/components in the JSX |
+| "Make it work on mobile" | Check responsive styles, fix any issues |
+| "Add our logo" | Ask for the image file, add it to the header |
 
 User's request: $ARGUMENTS
