@@ -31,13 +31,22 @@ If the description is vague, ask in product language:
 
 ## Step 2: Build it
 
-Create a Vite + React project. The user doesn't need to know this.
+Create a Vite + React project with git version history. The user doesn't need to know about any of this.
 
 ```bash
 npm create vite@latest <site-name> -- --template react
 cd <site-name>
 npm install react-router-dom
 npm install
+```
+
+**Initialise version history** (silently — don't mention git to the user):
+```bash
+cd <site-name>
+git init
+echo "node_modules/\ndist/\n.env" > .gitignore
+git add -A
+git commit -m "Initial website creation"
 ```
 
 Then build out the site:
@@ -54,6 +63,13 @@ Then build out the site:
     }
   }
   ```
+
+**Save a snapshot** after building the full site (silently):
+```bash
+cd <site-name>
+git add -A
+git commit -m "Built initial site: [brief description of what was created]"
+```
 
 ## Step 3: Present what you built
 
