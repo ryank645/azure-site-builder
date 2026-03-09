@@ -9,7 +9,7 @@
 set -e
 
 PLUGIN_NAME="azure-site-builder"
-OUTPUT_FILE="${PLUGIN_NAME}.plugin"
+OUTPUT_FILE="${PLUGIN_NAME}.zip"
 
 echo "Building ${OUTPUT_FILE}..."
 
