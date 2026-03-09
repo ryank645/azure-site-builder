@@ -24,24 +24,24 @@ The user wants to put their website live on the internet. Keep the language simp
 - Otherwise, look for React projects (directories with `package.json` + `src/`)
 - If multiple exist, ask: "Which website do you want to publish?" and list them by name
 
-## Step 2: Check for publishing key
+## Step 2: Get the publishing credentials
 
+Read the deployment token from config file (preferred) or env var (fallback):
 ```bash
-echo "${SWA_DEPLOYMENT_TOKEN:-not set}"
+CONFIG_FILE=~/.site-builder/config.json
+DEPLOY_TOKEN=$(cat "$CONFIG_FILE" 2>/dev/null | grep -o '"deploymentToken"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"deploymentToken"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
+if [ -z "$DEPLOY_TOKEN" ]; then
+  DEPLOY_TOKEN="${SWA_DEPLOYMENT_TOKEN:-}"
+fi
+echo "${DEPLOY_TOKEN:+found}"
 ```
 
-**If not set**, say:
-"To publish your website, I need a publishing key. Your admin should have given you one.
+**If found**, proceed silently.
 
-If you have it, you can either:
-- **Paste it here** and I'll use it now
-- **Set it up permanently** so you don't have to paste it each time — run this in PowerShell:
-  ```
-  [System.Environment]::SetEnvironmentVariable('SWA_DEPLOYMENT_TOKEN', 'paste-your-key-here', 'User')
-  ```
-  Then restart this chat.
+**If not found**, say:
+"Publishing isn't set up on your computer yet. Ask your admin to run the setup — it only takes a minute and you won't need to do anything yourself.
 
-If you don't have a key yet, ask your admin to set one up for you."
+If you have a publishing key you can paste it here and I'll use it for now."
 
 If the user pastes a token, use it directly. Do NOT write it to any file.
 
@@ -70,7 +70,7 @@ If the build fails, read `.site-builder/logs/last-build.log` to diagnose the iss
 ```bash
 cd <site-directory>
 npx @azure/static-web-apps-cli deploy ./dist \
-  --deployment-token $SWA_DEPLOYMENT_TOKEN \
+  --deployment-token $DEPLOY_TOKEN \
   --env production 2>&1 | tee .site-builder/logs/last-deploy.log
 echo "[$(date -u '+%Y-%m-%d %H:%M:%S UTC')] PUBLISH COMPLETED" >> .site-builder/logs/activity.log
 echo "  deploy_exit_code: $?" >> .site-builder/logs/activity.log
@@ -80,6 +80,17 @@ If the deploy fails, read `.site-builder/logs/last-deploy.log` to diagnose befor
 
 ## Step 4: Tell the user
 
+Check the config for the site URL:
+```bash
+SITE_URL=$(cat "$CONFIG_FILE" 2>/dev/null | grep -o '"siteUrl"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"siteUrl"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
+```
+
+If you have the URL:
+"Your website is live at **[URL]**! It may take a minute or two to fully update.
+
+To make changes later, just tell me what you'd like to update — I'll make the changes, and when you're ready, say **'publish it'** again to push the updates live."
+
+If no URL in config:
 "Your website is live! It may take a minute or two to fully update.
 
 To make changes later, just tell me what you'd like to update — I'll make the changes, and when you're ready, say **'publish it'** again to push the updates live."

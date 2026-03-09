@@ -115,19 +115,24 @@ Create `.env.example` (to document the variable without exposing real values):
 VITE_APPINSIGHTS_CONNECTION_STRING=
 ```
 
-Check if the user has `APPINSIGHTS_CONNECTION_STRING` set:
+**Read the App Insights connection string** from config file (preferred) or env var (fallback):
 ```bash
-echo "${APPINSIGHTS_CONNECTION_STRING:-not set}"
+CONFIG_FILE=~/.site-builder/config.json
+AI_CONN=$(cat "$CONFIG_FILE" 2>/dev/null | grep -o '"appInsightsConnectionString"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"appInsightsConnectionString"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
+if [ -z "$AI_CONN" ]; then
+  AI_CONN="${APPINSIGHTS_CONNECTION_STRING:-}"
+fi
+echo "$AI_CONN"
 ```
 
-If set, create a `.env` file with the value (this file is already gitignored):
+If a connection string was found, create a `.env` file with the value (this file is already gitignored):
 ```bash
-echo "VITE_APPINSIGHTS_CONNECTION_STRING=$APPINSIGHTS_CONNECTION_STRING" > .env
+echo "VITE_APPINSIGHTS_CONNECTION_STRING=$AI_CONN" > .env
 ```
 
-If not set, that's fine — telemetry is optional. The site works without it. Log this:
+If not found, that's fine — telemetry is optional. The site works without it. Log this:
 ```bash
-echo "  monitoring: $(if [ -n \"$APPINSIGHTS_CONNECTION_STRING\" ]; then echo 'enabled'; else echo 'disabled (no connection string)'; fi)" >> .site-builder/logs/activity.log
+echo "  monitoring: $(if [ -n \"$AI_CONN\" ]; then echo 'enabled'; else echo 'disabled (no config)'; fi)" >> .site-builder/logs/activity.log
 ```
 
 Then build out the site:

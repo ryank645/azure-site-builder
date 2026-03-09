@@ -13,11 +13,15 @@
  *   1. Verifies Azure CLI is installed and you're logged in
  *   2. Creates shared App Insights + Log Analytics (once, skips if exists)
  *   3. Creates a new Static Web App for the user/project
- *   4. Outputs everything the user needs: env vars to copy-paste
+ *   4. Writes config to ~/.site-builder/config.json (no user action needed)
+ *   5. Optionally generates a portable config file to send to a remote user
  */
 
 import { execSync } from "child_process";
 import * as readline from "readline";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
 
 // ── Azure config (hardcoded to claude-resources RG) ──────────────────────────
 
@@ -28,11 +32,42 @@ const TENANT = "oxfordeconomics.com";
 const LOG_WORKSPACE_NAME = "claude-sites-logs";
 const APPINSIGHTS_NAME = "claude-sites-appinsights";
 
+const CONFIG_DIR = path.join(os.homedir(), ".site-builder");
+const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
+
+// ── Config file ──────────────────────────────────────────────────────────────
+
+interface SiteBuilderConfig {
+  deploymentToken?: string;
+  appInsightsConnectionString?: string;
+  siteName?: string;
+  siteUrl?: string;
+  updatedAt?: string;
+}
+
+function readConfig(): SiteBuilderConfig {
+  try {
+    if (fs.existsSync(CONFIG_FILE)) {
+      return JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
+    }
+  } catch {}
+  return {};
+}
+
+function writeConfig(config: SiteBuilderConfig) {
+  fs.mkdirSync(CONFIG_DIR, { recursive: true });
+  config.updatedAt = new Date().toISOString();
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2) + "\n");
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function run(cmd: string, silent = false): string {
   try {
-    const result = execSync(cmd, { encoding: "utf-8", stdio: silent ? "pipe" : ["pipe", "pipe", "pipe"] });
+    const result = execSync(cmd, {
+      encoding: "utf-8",
+      stdio: silent ? "pipe" : ["pipe", "pipe", "pipe"],
+    });
     return result.trim();
   } catch (e: any) {
     if (silent) return "";
@@ -41,7 +76,10 @@ function run(cmd: string, silent = false): string {
 }
 
 function ask(question: string): Promise<string> {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
   return new Promise((resolve) => {
     rl.question(question, (answer) => {
       rl.close();
@@ -82,7 +120,9 @@ async function preflight() {
   if (!azVersion) {
     fail("Azure CLI is not installed.");
     console.log("         Install it: winget install Microsoft.AzureCLI");
-    console.log("         Then restart your terminal and run this script again.");
+    console.log(
+      "         Then restart your terminal and run this script again."
+    );
     process.exit(1);
   }
   success("Azure CLI installed");
@@ -162,13 +202,21 @@ async function setupMonitoring(): Promise<string> {
 
 // ── Step 3: Create a Static Web App ─────────────────────────────────────────
 
-async function createSite(): Promise<{ appName: string; token: string; hostname: string } | null> {
+async function createSite(): Promise<{
+  appName: string;
+  token: string;
+  hostname: string;
+} | null> {
   heading("Step 3: Create a Static Web App");
 
-  const appName = await ask("  Enter a name for the new site (e.g. marketing-site): ");
+  const appName = await ask(
+    "  Enter a name for the new site (e.g. marketing-site): "
+  );
 
   if (!appName) {
-    warn("Skipped — no name entered. You can run this script again to create a site later.");
+    warn(
+      "Skipped — no name entered. You can run this script again to create a site later."
+    );
     return null;
   }
 
@@ -180,7 +228,9 @@ async function createSite(): Promise<{ appName: string; token: string; hostname:
 
   if (existing) {
     warn(`Site '${appName}' already exists at https://${existing}`);
-    const reuse = await ask("  Get a fresh deployment token for it? (y/n): ");
+    const reuse = await ask(
+      "  Get a fresh deployment token for it? (y/n): "
+    );
     if (reuse.toLowerCase() !== "y") return null;
   } else {
     info(`Creating Static Web App '${appName}'...`);
@@ -223,59 +273,102 @@ async function listExistingSites() {
   }
 }
 
-// ── Output ──────────────────────────────────────────────────────────────────
+// ── Step 5: Write config ────────────────────────────────────────────────────
 
-function printUserInstructions(
+async function writeConfigAndFinish(
   connectionString: string,
   site: { appName: string; token: string; hostname: string } | null
 ) {
-  heading("Setup Complete — User Instructions");
+  heading("Step 4: Saving Configuration");
 
-  if (site) {
-    console.log("  Give the following to your user:");
+  const isLocalSetup = await ask(
+    "  Is this the user's computer? (y/n): "
+  );
+
+  if (isLocalSetup.toLowerCase() === "y") {
+    // ── Write config directly to this machine ──
+    const config = readConfig();
+    config.appInsightsConnectionString = connectionString;
+    if (site) {
+      config.deploymentToken = site.token;
+      config.siteName = site.appName;
+      config.siteUrl = `https://${site.hostname}`;
+    }
+    writeConfig(config);
+
+    success(`Config written to ${CONFIG_FILE}`);
+
+    heading("Setup Complete");
+    console.log("  Everything is configured. The user just needs to:");
     console.log("");
-    console.log("  ┌─────────────────────────────────────────────────────────┐");
-    console.log("  │  Copy-paste these commands into PowerShell (one-time):  │");
-    console.log("  └─────────────────────────────────────────────────────────┘");
-    console.log("");
-    console.log(`  [System.Environment]::SetEnvironmentVariable('SWA_DEPLOYMENT_TOKEN', '${site.token}', 'User')`);
-    console.log(`  [System.Environment]::SetEnvironmentVariable('APPINSIGHTS_CONNECTION_STRING', '${connectionString}', 'User')`);
-    console.log("");
-    console.log("  Then restart the terminal.");
-    console.log("");
-    console.log(`  Their site will be live at: https://${site.hostname}`);
-    console.log("");
-    console.log("  ┌─────────────────────────────────────────────────────────┐");
-    console.log("  │  What the user does next:                               │");
-    console.log("  │                                                         │");
-    console.log("  │  1. Open Claude Code                                    │");
-    console.log("  │  2. Run /azure-site-builder:setup (checks everything)   │");
-    console.log("  │  3. Run /azure-site-builder:create-site                 │");
-    console.log("  │  4. Describe the website they want                      │");
-    console.log("  │  5. Iterate with the bot                                │");
-    console.log("  │  6. Run /azure-site-builder:deploy-site to publish      │");
-    console.log("  └─────────────────────────────────────────────────────────┘");
+    console.log("  1. Open Claude Code");
+    console.log("  2. Run /azure-site-builder:setup  (verifies everything)");
+    console.log("  3. Run /azure-site-builder:create-site");
+    console.log("  4. Describe the website they want");
+    console.log("  5. Iterate with the bot");
+    console.log("  6. Say 'publish it' when ready");
+    if (site) {
+      console.log("");
+      console.log(`  Their site will be live at: https://${site.hostname}`);
+    }
   } else {
-    console.log("  Monitoring is set up. Run this script again to create a site for a user.");
+    // ── Generate a portable config file to send to the user ──
+    const exportConfig: SiteBuilderConfig = {
+      appInsightsConnectionString: connectionString,
+      updatedAt: new Date().toISOString(),
+    };
+    if (site) {
+      exportConfig.deploymentToken = site.token;
+      exportConfig.siteName = site.appName;
+      exportConfig.siteUrl = `https://${site.hostname}`;
+    }
+
+    const exportPath = path.join(
+      process.cwd(),
+      `site-builder-config-${site?.appName || "shared"}.json`
+    );
+    fs.writeFileSync(exportPath, JSON.stringify(exportConfig, null, 2) + "\n");
+
+    success(`Config file saved to: ${exportPath}`);
+
+    heading("Setup Complete — Send to User");
+    console.log("  Send the config file to the user and tell them to run:");
     console.log("");
-    console.log(`  App Insights connection string (for reference):`);
-    console.log(`  ${connectionString}`);
+    console.log("    mkdir %USERPROFILE%\\.site-builder");
+    console.log(
+      `    copy "${path.basename(exportPath)}" %USERPROFILE%\\.site-builder\\config.json`
+    );
+    console.log("");
+    console.log("  Or on Git Bash / WSL:");
+    console.log("");
+    console.log("    mkdir -p ~/.site-builder");
+    console.log(
+      `    cp "${path.basename(exportPath)}" ~/.site-builder/config.json`
+    );
+    console.log("");
+    console.log("  That's it — no environment variables, no Azure login.");
+    if (site) {
+      console.log(`  Their site will be live at: https://${site.hostname}`);
+    }
   }
 
+  // ── Admin reference ──
+  heading("Admin Reference");
+  console.log(`  Config file location:   ~/.site-builder/config.json`);
+  console.log(`  Resource group:         ${RESOURCE_GROUP}`);
+  console.log(`  App Insights:           ${APPINSIGHTS_NAME}`);
   console.log("");
-  console.log("  ┌─────────────────────────────────────────────────────────┐");
-  console.log("  │  Admin reference:                                       │");
-  console.log("  │                                                         │");
-  console.log("  │  Revoke a user's access:                                │");
-  console.log("  │    az staticwebapp secrets reset-api-key \\              │");
-  console.log(`  │      --name <app-name> \\                                │`);
-  console.log(`  │      --resource-group ${RESOURCE_GROUP}                  │`);
-  console.log("  │                                                         │");
-  console.log("  │  View monitoring dashboard:                             │");
-  console.log(`  │    Azure Portal → ${RESOURCE_GROUP} → ${APPINSIGHTS_NAME}│`);
-  console.log("  │                                                         │");
-  console.log("  │  Run this script again to onboard another user/site.    │");
-  console.log("  └─────────────────────────────────────────────────────────┘");
+  console.log("  Revoke a user's access:");
+  console.log(
+    `    az staticwebapp secrets reset-api-key --name <app-name> --resource-group ${RESOURCE_GROUP}`
+  );
+  console.log("");
+  console.log("  View monitoring:");
+  console.log(
+    `    Azure Portal → ${RESOURCE_GROUP} → ${APPINSIGHTS_NAME}`
+  );
+  console.log("");
+  console.log("  Onboard another user: run this script again.");
   console.log("");
 }
 
@@ -293,7 +386,7 @@ async function main() {
   const connectionString = await setupMonitoring();
   await listExistingSites();
   const site = await createSite();
-  printUserInstructions(connectionString, site);
+  await writeConfigAndFinish(connectionString, site);
 }
 
 main().catch((err) => {

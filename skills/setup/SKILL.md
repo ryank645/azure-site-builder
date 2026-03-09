@@ -16,6 +16,32 @@ You're helping a product owner or business user get ready to build and publish w
 
 Run each check below silently. Only surface issues that need the user's attention.
 
+## How config works
+
+All credentials are stored in `~/.site-builder/config.json`. The admin sets this up — the user should never have to touch it. The file looks like:
+```json
+{
+  "deploymentToken": "...",
+  "appInsightsConnectionString": "...",
+  "siteName": "...",
+  "siteUrl": "https://...",
+  "updatedAt": "..."
+}
+```
+
+Read this file first:
+```bash
+cat ~/.site-builder/config.json 2>/dev/null || echo "NOT FOUND"
+```
+
+Also check env vars as fallback (for backwards compatibility):
+```bash
+echo "${SWA_DEPLOYMENT_TOKEN:-not set}"
+echo "${APPINSIGHTS_CONNECTION_STRING:-not set}"
+```
+
+A value is "available" if it's in the config file OR the env var.
+
 ## Check 1: Website builder tools (Node.js + npm)
 
 ```bash
@@ -32,32 +58,18 @@ npm --version
 
 ## Check 2: Publishing credentials
 
-```bash
-echo "${SWA_DEPLOYMENT_TOKEN:-not set}"
-```
+Check if `deploymentToken` exists in config file or `SWA_DEPLOYMENT_TOKEN` env var.
 
-**If set**, say nothing — move on.
+**If available**, say nothing — move on.
 
-**If not set**, say:
-"You're almost ready! To publish websites, you'll need a publishing key from your admin. They'll give you a long code that looks like a random string of characters.
-
-Once you have it, set it up in PowerShell (one-time):
-```
-[System.Environment]::SetEnvironmentVariable('SWA_DEPLOYMENT_TOKEN', 'paste-your-key-here', 'User')
-```
-Then restart this chat.
-
-You can still design and preview websites without this — you just won't be able to publish them live until you set it up."
+**If not available**, say:
+"Publishing isn't set up yet — your admin needs to configure that for you. Everything else is ready, so you can start building and previewing websites right now. When you're ready to go live, ask your admin to run the setup for you."
 
 ## Check 3: Site monitoring (optional)
 
-```bash
-echo "${APPINSIGHTS_CONNECTION_STRING:-not set}"
-```
+Check if `appInsightsConnectionString` exists in config file or `APPINSIGHTS_CONNECTION_STRING` env var.
 
-**If set**, say nothing — move on.
-
-**If not set**, say nothing to the user either — monitoring is optional and admin-configured. Just note it silently for the summary.
+**If available or not**, say nothing. This is fully behind the scenes.
 
 ## Check 4: Publishing tools (SWA CLI)
 
@@ -73,7 +85,7 @@ npx @azure/static-web-apps-cli --version 2>&1
 
 Show a friendly status:
 
-If everything passed (include monitoring status only if admin has set it up):
+If everything passed:
 "You're all set! Here's what you can do:
 
 - **Create a website**: `/azure-site-builder:create-site` — tell me what you want and I'll build it
@@ -81,13 +93,13 @@ If everything passed (include monitoring status only if admin has set it up):
 - **Make changes**: just tell me what to change in plain English
 - **Publish it**: `/azure-site-builder:deploy-site` — put it live on the internet
 
-[If APPINSIGHTS_CONNECTION_STRING is set, add:]
+[If monitoring is available, add:]
 Your published sites will have monitoring enabled — I'll be able to spot and fix issues even after they go live."
 
-If Node works but no token:
+If Node works but no publishing credentials:
 "You're ready to start designing! You can create and preview websites right now.
 
-When you're ready to publish, ask your admin for a publishing key and I'll walk you through setting it up."
+When you're ready to publish, ask your admin to set up your computer — it's quick and you won't need to do anything."
 
 If Node is missing:
 "We need to get one thing installed first — I've explained what to do above. Once that's sorted, run `/azure-site-builder:setup` again and we'll be good to go."
