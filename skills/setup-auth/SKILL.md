@@ -1,16 +1,16 @@
 ---
 name: setup-auth
-description: Admin tool to create an Azure service principal for the claude-resources resource group. Use this to generate credentials you can give to non-technical users so they can deploy without az login.
+description: Admin tool to create an Azure Static Web App and generate a deployment token to give to a user. Requires Azure CLI and admin access.
 allowed-tools: Bash
 disable-model-invocation: true
-argument-hint: [service-principal-name]
+argument-hint: [app-name]
 ---
 
-# Create Service Principal for Users (Admin Only)
+# Create a Static Web App & Deployment Token (Admin Only)
 
-This is an admin tool. It creates a service principal scoped to the `claude-resources` resource group so you can give users a set of credentials for deploying.
+This is an admin tool. It creates a new Azure Static Web App in the `claude-resources` resource group and outputs a deployment token you can give to a user. The user does NOT need Azure CLI or an Azure account — just Node.js and the token.
 
-## Steps
+## Prerequisites
 
 1. **Check the admin is logged in**:
    ```bash
@@ -23,35 +23,82 @@ This is an admin tool. It creates a service principal scoped to the `claude-reso
    az account set --subscription 5def3d89-62c5-4b4e-afea-c447e4b321f1
    ```
 
-3. **Choose a service principal name**:
-   - Use `$ARGUMENTS` if provided, otherwise default to `claude-site-builder-sp`
+## Create the Static Web App
 
-4. **Create the service principal** with Contributor role scoped to the resource group:
+1. **Choose an app name**:
+   - Use `$ARGUMENTS` if provided
+   - Otherwise ask the admin what to call it (e.g. `marketing-site`, `johns-portfolio`)
+   - This name identifies the app in Azure — the public URL will be auto-generated
+
+2. **Create the app**:
    ```bash
-   az ad sp create-for-rbac \
-     --name <sp-name> \
-     --role Contributor \
-     --scopes /subscriptions/5def3d89-62c5-4b4e-afea-c447e4b321f1/resourceGroups/claude-resources \
-     --query "{AZURE_CLIENT_ID:appId, AZURE_CLIENT_SECRET:password, AZURE_TENANT_ID:tenant}" \
-     -o json
+   az staticwebapp create \
+     --name <app-name> \
+     --resource-group claude-resources \
+     --location "westeurope" \
+     --subscription 5def3d89-62c5-4b4e-afea-c447e4b321f1 \
+     --sku Free
    ```
 
-5. **Show the output** and tell the admin:
-
-   "Here are the credentials. Give these three values to your users:
-
+3. **Get the deployment token**:
+   ```bash
+   az staticwebapp secrets list \
+     --name <app-name> \
+     --resource-group claude-resources \
+     --subscription 5def3d89-62c5-4b4e-afea-c447e4b321f1 \
+     --query "properties.apiKey" -o tsv
    ```
-   AZURE_CLIENT_ID=<appId>
-   AZURE_CLIENT_SECRET=<password>
-   AZURE_TENANT_ID=<tenant>
+
+4. **Get the public URL**:
+   ```bash
+   az staticwebapp show \
+     --name <app-name> \
+     --resource-group claude-resources \
+     --subscription 5def3d89-62c5-4b4e-afea-c447e4b321f1 \
+     --query "defaultHostname" -o tsv
    ```
 
-   **Important:**
-   - These credentials grant Contributor access to the `claude-resources` resource group only
-   - The user can create/delete Static Web Apps within that RG
-   - They CANNOT access any other resource group or subscription resource
-   - Store the secret securely — treat it like a password
-   - To revoke access later: `az ad sp delete --id <appId>`
-   - To rotate the secret: `az ad sp credential reset --id <appId>`"
+## Output to the admin
 
-Service principal name: $ARGUMENTS
+"Here's what to give to your user:
+
+**Deployment Token:**
+```
+<token>
+```
+
+**Their site will be live at:**
+```
+https://<hostname>
+```
+
+**Tell the user to set up the token (one-time):**
+
+In PowerShell:
+```
+[System.Environment]::SetEnvironmentVariable('SWA_DEPLOYMENT_TOKEN', '<token>', 'User')
+```
+Then restart their terminal.
+
+**What the user can do with this token:**
+- Deploy and update their static site
+- They CANNOT create/delete other apps or access other Azure resources
+- The token is scoped to this single Static Web App
+
+**To revoke access later:**
+```
+az staticwebapp secrets reset-api-key --name <app-name> --resource-group claude-resources --subscription 5def3d89-62c5-4b4e-afea-c447e4b321f1
+```
+This invalidates the old token. You can then get a new one with `secrets list` if needed."
+
+## List existing apps (if the admin wants to see what's already deployed)
+
+```bash
+az staticwebapp list \
+  --resource-group claude-resources \
+  --subscription 5def3d89-62c5-4b4e-afea-c447e4b321f1 \
+  --query "[].{name:name, url:defaultHostname, location:location}" \
+  -o table
+```
+
+App name: $ARGUMENTS
