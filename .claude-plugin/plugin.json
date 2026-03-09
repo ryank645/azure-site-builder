@@ -1,0 +1,9 @@
+{
+  "name": "azure-site-builder",
+  "version": "1.0.0",
+  "description": "Help non-technical users create websites and deploy them to Azure Static Web Apps",
+  "author": {
+    "name": "rkilgour"
+  },
+  "keywords": ["azure", "static-web-apps", "website", "deploy", "no-code"]
+}
