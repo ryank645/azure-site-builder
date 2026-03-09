@@ -1,104 +1,27 @@
 ---
 name: setup-auth
-description: Admin tool to create an Azure Static Web App and generate a deployment token to give to a user. Requires Azure CLI and admin access.
+description: Admin tool to provision Azure resources and onboard users. Creates monitoring, Static Web Apps, and generates user credentials. Run this to set up a new user or site.
 allowed-tools: Bash
 disable-model-invocation: true
-argument-hint: [app-name]
+argument-hint: [site-name]
 ---
 
-# Create a Static Web App & Deployment Token (Admin Only)
+# Admin Setup
 
-This is an admin tool. It creates a new Azure Static Web App in the `claude-resources` resource group and outputs a deployment token you can give to a user. The user does NOT need Azure CLI or an Azure account — just Node.js and the token.
+Run the admin setup script. This handles everything:
+- Verifies Azure CLI and login
+- Creates shared monitoring (App Insights + Log Analytics) — skips if already exists
+- Creates a new Static Web App for the user
+- Outputs the exact PowerShell commands to give to the user
 
-## Prerequisites
-
-1. **Check the admin is logged in**:
-   ```bash
-   az account show
-   ```
-   If not, run `az login --tenant oxfordeconomics.com`.
-
-2. **Set the subscription**:
-   ```bash
-   az account set --subscription 5def3d89-62c5-4b4e-afea-c447e4b321f1
-   ```
-
-## Create the Static Web App
-
-1. **Choose an app name**:
-   - Use `$ARGUMENTS` if provided
-   - Otherwise ask the admin what to call it (e.g. `marketing-site`, `johns-portfolio`)
-   - This name identifies the app in Azure — the public URL will be auto-generated
-
-2. **Create the app**:
-   ```bash
-   az staticwebapp create \
-     --name <app-name> \
-     --resource-group claude-resources \
-     --location "westeurope" \
-     --subscription 5def3d89-62c5-4b4e-afea-c447e4b321f1 \
-     --sku Free
-   ```
-
-3. **Get the deployment token**:
-   ```bash
-   az staticwebapp secrets list \
-     --name <app-name> \
-     --resource-group claude-resources \
-     --subscription 5def3d89-62c5-4b4e-afea-c447e4b321f1 \
-     --query "properties.apiKey" -o tsv
-   ```
-
-4. **Get the public URL**:
-   ```bash
-   az staticwebapp show \
-     --name <app-name> \
-     --resource-group claude-resources \
-     --subscription 5def3d89-62c5-4b4e-afea-c447e4b321f1 \
-     --query "defaultHostname" -o tsv
-   ```
-
-## Output to the admin
-
-"Here's what to give to your user:
-
-**Deployment Token:**
-```
-<token>
-```
-
-**Their site will be live at:**
-```
-https://<hostname>
-```
-
-**Tell the user to set up the token (one-time):**
-
-In PowerShell:
-```
-[System.Environment]::SetEnvironmentVariable('SWA_DEPLOYMENT_TOKEN', '<token>', 'User')
-```
-Then restart their terminal.
-
-**What the user can do with this token:**
-- Deploy and update their static site
-- They CANNOT create/delete other apps or access other Azure resources
-- The token is scoped to this single Static Web App
-
-**To revoke access later:**
-```
-az staticwebapp secrets reset-api-key --name <app-name> --resource-group claude-resources --subscription 5def3d89-62c5-4b4e-afea-c447e4b321f1
-```
-This invalidates the old token. You can then get a new one with `secrets list` if needed."
-
-## List existing apps (if the admin wants to see what's already deployed)
+## Run the script
 
 ```bash
-az staticwebapp list \
-  --resource-group claude-resources \
-  --subscription 5def3d89-62c5-4b4e-afea-c447e4b321f1 \
-  --query "[].{name:name, url:defaultHostname, location:location}" \
-  -o table
+cd ${CLAUDE_SKILL_DIR}/../../scripts
+npx tsx admin-setup.ts
 ```
 
-App name: $ARGUMENTS
+The script is interactive — it will prompt for a site name and handle the rest.
+
+If `$ARGUMENTS` is provided, pass it as context: the user wants to create a site called `$ARGUMENTS`.
+After the script runs, relay the user instructions output to the admin.
